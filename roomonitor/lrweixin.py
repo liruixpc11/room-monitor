@@ -56,8 +56,7 @@ class WeiXinClient:
                 "content": message,
             },
             "safe": 1 if safe else 0
-        })
-        print payload
+        }, ensure_ascii=False)
         request('post', api_url('message/send'), params={
             "access_token": self.token
         }, data=payload)

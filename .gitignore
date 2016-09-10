@@ -1,3 +1,4 @@
 roomonitor/settings.py
 .idea/
 *.pyc
+*.db
