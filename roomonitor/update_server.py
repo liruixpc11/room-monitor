@@ -5,7 +5,10 @@ from datetime import datetime
 from twisted.internet import reactor
 from twisted.internet.protocol import Factory, connectionDone, Protocol, BaseProtocol
 from twisted.protocols.basic import LineReceiver
-from utils import publish_message, update_sensor_status, should_alert, TIME_FORMAT, create_logger
+
+from roomonitor.db import CONNECTED, DISCONNECTED
+from utils import publish_message, update_sensor_status, should_alert, TIME_FORMAT, create_logger, \
+    update_controller_status, update_active_time
 
 import settings
 
@@ -34,6 +37,7 @@ class UpdateServer(LineReceiver):
         LOG.warn("{0} connection lost because of {1}".format(self.client_desc(), reason))
         if self.login_pass:
             publish_message("警告：\n客户端{0}断开连接".format(self.client_desc()))
+        update_controller_status(self.client_name, self.transport.client[0], DISCONNECTED)
 
     def connectionMade(self):
         BaseProtocol.connectionMade(self)
@@ -64,6 +68,9 @@ class UpdateServer(LineReceiver):
             if type_ == 'data':
                 LOG.debug("DATA message")
                 self.on_data(data)
+            elif type_ == 'heartbeat':
+                update_active_time(self.client_name, datetime.now())
+                self.reply()
             else:
                 LOG.warn("UNKNOWN message")
                 self.reply(UNKNOWN_TYPE)
@@ -74,11 +81,13 @@ class UpdateServer(LineReceiver):
         if secret == settings.SECRET:
             self.login_pass = True
             self.reply()
+            update_controller_status(self.client_name, self.transport.client[0], CONNECTED)
         else:
             LOG.warn("{0} login failed".format(self.client_desc()))
             self.reply(LOGIN_FAILED)
 
     def on_data(self, data):
+        report_time = datetime.now()
         entries = data['entries']
         alert = []
         for entry in entries:
@@ -88,7 +97,8 @@ class UpdateServer(LineReceiver):
             update_time = datetime.strptime(update_time, TIME_FORMAT)
             humidity = entry.get('humidity', None)
             temperature = entry.get('temperature', None)
-            update_sensor_status(sensor_id, status, update_time, humidity, temperature)
+            update_sensor_status(self.client_name, sensor_id, status, update_time, report_time, humidity, temperature)
+            update_active_time(self.client_name, report_time)
             if status != 'OK':
                 alert.append('[传感器{0}]状态异常，当前状态为"{1}"'.format(sensor_id, status))
             elif should_alert(temperature, humidity):

@@ -1,6 +1,7 @@
 # coding=utf-8
 import socket
 import json
+import random
 from datetime import datetime
 
 s = socket.socket()
@@ -27,7 +28,7 @@ s.sendall(json.dumps({
             'sensor_id': '2',
             'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             'status': 'OK',
-            'humidity': 84,
+            'humidity': 3,
             'temperature': 27
         },
         {
