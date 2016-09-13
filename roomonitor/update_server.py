@@ -97,7 +97,7 @@ class UpdateServer(LineReceiver):
             update_time = datetime.strptime(update_time, TIME_FORMAT)
             humidity = entry.get('humidity', None)
             temperature = entry.get('temperature', None)
-            update_sensor_status(self.client_name, sensor_id, status, update_time, report_time, humidity, temperature)
+            update_sensor_status(self.client_name, sensor_id, status, update_time, report_time, temperature, humidity)
             update_active_time(self.client_name, report_time)
             if status != 'OK':
                 alert.append('[传感器{0}]状态异常，当前状态为"{1}"'.format(sensor_id, status))

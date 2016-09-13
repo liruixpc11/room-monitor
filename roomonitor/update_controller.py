@@ -46,10 +46,14 @@ class ReportThread(threading.Thread):
                 self.disconnect()
                 return
 
-            try:
-                self.process_action(action)
-            except Exception as ex:
-                LOG.error("process action [{0}] failed: {1}".format(action, ex))
+            done = False
+            while not done:
+                try:
+                    self.process_action(action)
+                    done = True
+                except Exception as ex:
+                    LOG.warn("process action failed, will retry; [{0}] : {1}".format(action, ex))
+                    time.sleep(5)
 
     def process_action(self, action):
         action_name, action_args = action
@@ -93,8 +97,8 @@ class ReportThread(threading.Thread):
     def receive_reply(self):
         while not '\r\n' in self.buffer:
             self.buffer += self.connection.recv(1024)
-            index = self.buffer.index('\r\n')
-            if index >= 0:
+            if '\r\n' in self.buffer:
+                index = self.buffer.index('\r\n')
                 reply_string = self.buffer[0:index]
                 self.buffer = self.buffer[index + 2:]
                 return json.loads(reply_string)
@@ -156,25 +160,28 @@ class SensorControlThread(threading.Thread):
             self.action_queue.put(('report', self.sense()))
 
     def sense(self):
+        down = random.randint(0, 1)
         return [
             {
                 'sensor_id': '1',
                 'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 'status': 'OK',
-                'humidity': 72,
-                'temperature': random.randint(20, 35)
+                'humidity': random.randint(11, 92),
+                'temperature': random.randint(19, 32)
             },
             {
                 'sensor_id': '2',
                 'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 'status': 'OK',
                 'humidity': random.randint(20, 60),
-                'temperature': random.randint(20, 35)
+                'temperature': random.randint(22, 35)
             },
             {
                 'sensor_id': '3',
                 'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'status': 'DOWN',
+                'status': 'DOWN' if down else 'OK',
+                'humidity': random.randint(20, 60) if not down else None,
+                'temperature': random.randint(22, 35) if not down else None
             }
         ]
 

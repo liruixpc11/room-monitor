@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from lrweixin import WeiXinClientFactory
 from db import DbFactory, SensorStatus, SensorLog, Controller
 
@@ -79,6 +79,30 @@ def update_controller_status(controller_name, ip, status):
             record.status = status
             record.last_active_time = active_time
         session.commit()
+    finally:
+        session.close()
+
+
+def query_sensor_logs(last_id=None, limit=0):
+    session = DB_FACTORY.create_session()
+    try:
+        query = session.query(SensorLog)
+        if last_id:
+            query = query.filter(SensorLog.id > last_id)
+        else:
+            query = query.filter(SensorLog.update_time >= (datetime.now() - timedelta(hours=12)).strftime(TIME_FORMAT))
+        query = query.order_by(SensorLog.id)
+        if limit:
+            query = query.limit(limit)
+        return query.all()
+    finally:
+        session.close()
+
+
+def query_sensor_status():
+    session = DB_FACTORY.create_session()
+    try:
+        return session.query(SensorStatus).order_by(SensorStatus.sensor_id).all()
     finally:
         session.close()
 
