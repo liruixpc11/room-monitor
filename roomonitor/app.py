@@ -8,7 +8,8 @@ from utils import query_sensor_logs, query_sensor_status, TIME_FORMAT
 
 urls = (
     '/', 'index',
-    '/logs', 'logs'
+    '/logs', 'logs',
+    '/status', 'status'
 )
 app = web.application(urls, globals())
 renderer = render_jinja('static', encoding='utf-8')
@@ -33,6 +34,20 @@ class logs:
             'temperature': r.temperature,
             'humidity': r.humidity
         }, logs))
+
+
+class status:
+    def GET(self):
+        status = query_sensor_status()
+        return json.dumps(map(lambda r: {
+            'controllerName': r.controller_name,
+            'sensorId': r.sensor_id,
+            'status': r.status,
+            'updateTime': r.update_time.strftime(TIME_FORMAT),
+            'reportTime': r.report_time.strftime(TIME_FORMAT),
+            'temperature': r.temperature,
+            'humidity': r.humidity
+        }, status))
 
 
 if __name__ == '__main__':

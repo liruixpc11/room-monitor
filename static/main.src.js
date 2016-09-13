@@ -3,7 +3,7 @@
  */
 
 /**
- * PATCH
+ * UTILS
  */
 String.prototype.format = function () {
     var str = this;
@@ -17,11 +17,150 @@ String.prototype.format = function () {
 /**
  * CODE
  */
-var Chart = require('chart.js');
 var $ = require('jquery');
 
 var chartRegion = $('#content');
 
+/**
+ * draw gauge charts
+ */
+var echarts = require('echarts');
+$.getJSON({
+    url: '/status',
+    success: function (data) {
+        var updaters = {};
+        $.each(data, function (i, record) {
+            updaters[record.sensorId] = renderGaugeChart(record, chartRegion);
+        });
+
+        var f = function () {
+            $.getJSON({
+                url: '/status',
+                success: function (data) {
+                    $.each(data, function (i, record) {
+                        updaters[record.sensorId](record);
+                    });
+                }
+            }).done(function () {
+                setTimeout(f, 2000)
+            });
+        };
+
+        setTimeout(f, 2000);
+    }
+});
+
+function renderGaugeChart(record, chartRegion) {
+    var chartId = 'status-gauge-' + record.sensorId;
+    chartRegion.append("<div id='{0}' style='width: 100%; height: 400px;'></div>".format(chartId));
+    var chart = echarts.init($('#' + chartId).get(0));
+    var options = {
+        title: {
+            text: '传感器 {0}'.format(record.sensorId)
+        },
+        tooltip: {
+            formatter: "{a} <br/>{c} {b}"
+        },
+        toolbox: {
+            show: true,
+            feature: {
+                mark: {show: true},
+                restore: {show: true},
+                saveAsImage: {show: true}
+            }
+        },
+        series: [
+            {
+                name: '温度',
+                type: 'gauge',
+                z: 3,
+                min: -10,
+                max: 60,
+                splitNumber: 14,
+                axisLine: {            // 坐标轴线
+                    lineStyle: {       // 属性lineStyle控制线条样式
+                        width: 10
+                    }
+                },
+                axisTick: {            // 坐标轴小标记
+                    length: 15,        // 属性length控制线长
+                    lineStyle: {       // 属性lineStyle控制线条样式
+                        color: 'auto'
+                    }
+                },
+                splitLine: {           // 分隔线
+                    length: 20,         // 属性length控制线长
+                    lineStyle: {       // 属性lineStyle（详见lineStyle）控制线条样式
+                        color: 'auto'
+                    }
+                },
+                title: {
+                    textStyle: {       // 其余属性默认使用全局文本样式，详见TEXTSTYLE
+                        fontWeight: 'bolder',
+                        fontSize: 20
+                    }
+                },
+                detail: {
+                    textStyle: {       // 其余属性默认使用全局文本样式，详见TEXTSTYLE
+                        fontWeight: 'bolder'
+                    }
+                },
+                data: [{value: record.temperature, name: '温度(摄氏度)'}]
+            },
+            {
+                name: '湿度',
+                type: 'gauge',
+                center: ['25%', '55%'],    // 默认全局居中
+                radius: '50%',
+                min: 0,
+                max: 100,
+                endAngle: 45,
+                splitNumber: 10,
+                axisLine: {            // 坐标轴线
+                    lineStyle: {       // 属性lineStyle控制线条样式
+                        width: 8
+                    }
+                },
+                axisTick: {            // 坐标轴小标记
+                    length: 12,        // 属性length控制线长
+                    lineStyle: {       // 属性lineStyle控制线条样式
+                        color: 'auto'
+                    }
+                },
+                splitLine: {           // 分隔线
+                    length: 20,         // 属性length控制线长
+                    lineStyle: {       // 属性lineStyle（详见lineStyle）控制线条样式
+                        color: 'auto'
+                    }
+                },
+                pointer: {
+                    width: 5
+                },
+                title: {
+                    offsetCenter: [0, '-30%']       // x, y，单位px
+                },
+                detail: {
+                    textStyle: {       // 其余属性默认使用全局文本样式，详见TEXTSTYLE
+                        fontWeight: 'bolder'
+                    }
+                },
+                data: [{value: record.humidity, name: '湿度(%)'}]
+            }
+        ]
+    };
+    chart.setOption(options);
+
+    return function (record) {
+        options.series[0].data[0].value = record.temperature;
+        options.series[1].data[0].value = record.humidity;
+        chart.setOption(options, true);
+    }
+}
+
+/**
+ * draw line charts
+ */
+var Chart = require('chart.js');
 $.getJSON({
     url: '/logs',
     success: function (data) {
@@ -135,7 +274,7 @@ function renderLineChart(logs, chartRegion, property, title) {
     });
 
     var id = 'line-chart-' + property;
-    chartRegion.append('<canvas id="{0}" height="100"></canvas>'.format(id));
+    chartRegion.append('<canvas id="{0}" height="100px"></canvas>'.format(id));
     var chart = new Chart($('#' + id), {
         type: 'line',
         data: {
