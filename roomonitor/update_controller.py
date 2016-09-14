@@ -155,41 +155,60 @@ class SensorControlThread(threading.Thread):
         self.daemon = True
 
     def run(self):
-        while 1:
-            time.sleep(5)
-            self.action_queue.put(('report', self.sense()))
-
-    def sense(self):
-        down = random.randint(0, 1)
-        return [
+        time.sleep(5)
+        # first to alarm
+        self.action_queue.put(('report', [
             {
                 'sensor_id': '1',
                 'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 'status': 'OK',
-                'humidity': random.randint(11, 92),
-                'temperature': random.randint(19, 32)
+                'humidity': random.randint(11, 79),
+                'temperature': 35
             },
             {
                 'sensor_id': '2',
                 'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 'status': 'OK',
                 'humidity': random.randint(20, 60),
-                'temperature': random.randint(22, 35)
+                'temperature': 38
+            }
+        ]))
+
+        while 1:
+            time.sleep(5)
+            self.action_queue.put(('report', self.sense()))
+
+    def sense(self):
+        # down = random.randint(0, 1)
+        return [
+            {
+                'sensor_id': '1',
+                'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                'status': 'OK',
+                'humidity': random.randint(11, 79),
+                'temperature': random.randint(19, 29)
             },
             {
-                'sensor_id': '3',
+                'sensor_id': '2',
                 'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'status': 'DOWN' if down else 'OK',
-                'humidity': random.randint(20, 60) if not down else None,
-                'temperature': random.randint(22, 35) if not down else None
-            }
+                'status': 'OK',
+                'humidity': random.randint(20, 60),
+                'temperature': random.randint(22, 29)
+            },
+            # {
+            #     'sensor_id': '3',
+            #     'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            #     'status': 'DOWN' if down else 'OK',
+            #     'humidity': random.randint(20, 29) if not down else None,
+            #     'temperature': random.randint(22, 29) if not down else None
+            # }
         ]
 
 
 def main():
     LOG.info('initializing')
     action_queue = Queue.Queue(1024)
-    report_thread = ReportThread(action_queue, ('127.0.0.1', 9999), 'secret', 'TEST')
+    report_thread = ReportThread(action_queue, ('115.28.100.161', 9999), 'secret', 'TEST')
     report_thread.start()
 
     HeartbeatThread(action_queue).start()

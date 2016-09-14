@@ -1,7 +1,7 @@
-roomonitor/settings.py
 .idea/
 *.pyc
 *.db
 *.log
 .gitignore
 node_modules/
+/dist/

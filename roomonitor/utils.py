@@ -1,3 +1,4 @@
+# coding=utf-8
 import logging
 from datetime import datetime, timedelta
 from lrweixin import WeiXinClientFactory
@@ -15,6 +16,8 @@ logging.basicConfig()
 
 
 def publish_message(message):
+    if settings.GAUGE_URL:
+        message += "\n详情请查看: " + settings.GAUGE_URL
     if TEST_MODE:
         print 'SEND WEIXIN:', '\n  '.join(message.split('\n'))
     else:

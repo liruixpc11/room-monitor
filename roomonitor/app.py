@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import json
 import os
 
@@ -50,7 +51,6 @@ class status:
         }, status))
 
 
+application = app.wsgifunc()
 if __name__ == '__main__':
     app.run()
-else:
-    application = app.wsgifunc()
