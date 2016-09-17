@@ -223,12 +223,14 @@ function renderLineChart(logs, chartRegion, property, title) {
     var updateTimes = $.map(logs, function (v) {
         return v.updateTime;
     });
+    updateTimes.sort();
     var labels = $.unique(updateTimes);
 
-    var sensorIds = $.unique($.map(logs, function (v) {
+    var sensorIds = $.map(logs, function (v) {
         return v.sensorId;
-    }));
+    });
     sensorIds.sort();
+    sensorIds = $.unique(sensorIds);
     var sensorData = {};
     $.each(sensorIds, function (i, sensorId) {
         sensorData[sensorId] = $.map(labels, function () {
@@ -300,10 +302,11 @@ function renderLineChart(logs, chartRegion, property, title) {
             return;
         }
 
-        var newTimes = $.unique($.map(newLogs, function (v) {
+        var newTimes = $.map(newLogs, function (v) {
             return v.updateTime
-        }));
+        });
         newTimes.sort();
+        newTimes = $.unique(newTimes);
         var newLabels = $.grep(newTimes, function (t) {
             return labels.indexOf(t) == -1
         });
