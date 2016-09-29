@@ -5,7 +5,9 @@ import Queue
 import logging
 import time
 import random
+import get_tem
 from datetime import datetime
+from settings import MODE
 
 logging.basicConfig()
 LOG = logging.getLogger(__name__)
@@ -51,8 +53,12 @@ class ReportThread(threading.Thread):
                 try:
                     self.process_action(action)
                     done = True
+                except ServerException as ex:
+                    LOG.warn("process action failure from server: {0}".format(ex))
                 except Exception as ex:
                     LOG.warn("process action failed, will retry; [{0}] : {1}".format(action, ex))
+                    LOG.exception(ex)
+                finally:
                     time.sleep(5)
 
     def process_action(self, action):
@@ -155,60 +161,39 @@ class SensorControlThread(threading.Thread):
         self.daemon = True
 
     def run(self):
-        time.sleep(5)
-        # first to alarm
-        self.action_queue.put(('report', [
-            {
-                'sensor_id': '1',
-                'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'status': 'OK',
-                'humidity': random.randint(11, 79),
-                'temperature': 35
-            },
-            {
-                'sensor_id': '2',
-                'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'status': 'OK',
-                'humidity': random.randint(20, 60),
-                'temperature': 38
-            }
-        ]))
-
         while 1:
             time.sleep(5)
-            self.action_queue.put(('report', self.sense()))
+            try:
+                result = self.sense()
+                if result and len(result):
+                    self.action_queue.put(('report', result))
+                else:
+                    LOG.info("sensor nothing")
+            except Exception, ex:
+                LOG.warn("sense error: " + str(ex))
 
     def sense(self):
-        # down = random.randint(0, 1)
-        return [
-            {
-                'sensor_id': '1',
-                'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'status': 'OK',
-                'humidity': random.randint(11, 79),
-                'temperature': random.randint(19, 29)
-            },
-            {
-                'sensor_id': '2',
-                'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'status': 'OK',
-                'humidity': random.randint(20, 60),
-                'temperature': random.randint(22, 29)
-            },
-            # {
-            #     'sensor_id': '3',
-            #     'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            #     'status': 'DOWN' if down else 'OK',
-            #     'humidity': random.randint(20, 29) if not down else None,
-            #     'temperature': random.randint(22, 29) if not down else None
-            # }
-        ]
+        pins = [15, 18]
+
+        result = []
+        for i, pin in enumerate(pins):
+            temperature, humility = get_tem.sense_th(pin)
+            if temperature > -255:
+                result.append({
+                    'sensor_id': str(i + 1),
+                    'update_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'status': 'OK',
+                    'humidity': humility,
+                    'temperature': temperature
+                })
+
+        return result
 
 
 def main():
     LOG.info('initializing')
     action_queue = Queue.Queue(1024)
-    report_thread = ReportThread(action_queue, ('115.28.100.161', 9999), 'secret', 'TEST')
+    report_thread = ReportThread(action_queue, ('115.28.100.161', 9999), 'secret', MODE)
     report_thread.start()
 
     HeartbeatThread(action_queue).start()

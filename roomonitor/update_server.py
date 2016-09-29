@@ -82,6 +82,7 @@ class UpdateServer(LineReceiver):
             self.login_pass = True
             self.reply()
             update_controller_status(self.client_name, self.transport.client[0], CONNECTED)
+            publish_message("通知：\n客户端{0}认证通过".format(self.client_desc()))
         else:
             LOG.warn("{0} login failed".format(self.client_desc()))
             self.reply(LOGIN_FAILED)
